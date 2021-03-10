@@ -1,26 +1,41 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div class="calendar">
+    <calendar @getDate="getDate"></calendar>
+    <tasks :dayNum="dayNum"></tasks>
+  </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import Calendar from "./components/Calendar";
+import Tasks from "./components/Tasks";
 
 export default {
   name: 'App',
+  data() {
+    return {
+      dayNum: '',
+    }
+  },
   components: {
-    HelloWorld
+    Calendar,
+    Tasks
+  },
+  methods: {
+    getDate(day, month, year) {
+      this.dayNum = `${day} ${month} ${year}`
+    },
   }
 }
 </script>
 
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+body {
+  background: #a0a4c842;
+}
+
+.calendar {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 </style>

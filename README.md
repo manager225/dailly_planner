@@ -1,4 +1,6 @@
-# calendar
+# daily planner
+## Ежедневник на Vue 3.Реализованы: добавление/ удаление/ редактирование задач.
+![Imgur](https://i.imgur.com/iPmrgpy.gif)
 
 ## Project setup
 ```
