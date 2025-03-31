@@ -1,7 +1,7 @@
 <template>
 
   <div class="tasks_list">
-    <h3 v-if="getDayInApp == ''">Ежедневник</h3>
+    <h3 v-if="getDayInApp === ''">Ежедневник</h3>
     <h3 v-else>Ежедневник <br>{{ getDayInApp }}</h3>
     <div class="addTask">
       <input
