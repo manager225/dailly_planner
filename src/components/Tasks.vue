@@ -1,8 +1,8 @@
 <template>
 
   <div class="tasks_list">
-    <h3 v-if="getDay == ''">Ежедневник</h3>
-    <h3 v-else>Ежедневник <br>{{ getDay }}</h3>
+    <h3 v-if="getDayInApp == ''">Ежедневник</h3>
+    <h3 v-else>Ежедневник <br>{{ getDayInApp }}</h3>
     <div class="addTask">
       <input
           class="input_task"
@@ -10,16 +10,14 @@
           v-model="taskInput"
 
           placeholder="Добавьте задачу"
-          @keyup.enter="addTask"
+          @keyup.enter="handleAddTask"
       >
-      <button :disabled="taskInput.length === 0" @click="addTask">Добавить</button>
+      <button :disabled="taskInput.length === 0" @click="handleAddTask">Добавить</button>
     </div>
     <div class="task_list">
       <ul>
-        <template v-for="(task, idx) in tasks">
+        <template v-for="task in filteredTasks" :key="task.id">
           <li
-              v-if="task.date == getDayInApp"
-              :key="task.id"
               :class="task.checked ? 'done' : ''"
               class="task"
           >
@@ -31,15 +29,22 @@
       </span>
 
         <input
-            v-if="task.edit"
+            v-if="editingTaskId === task.id"
             v-model="form.text"
             @keyup.enter="changeTask"
-            type="text"/>
+            @keyup.esc="cancelEdit"
+            @blur="cancelEdit"
+            type="text"
+            ref="editInput" />
 
-      <span v-else @dblclick="showForm(idx)">{{ task.title }}</span>
+      <span v-else @dblclick="showForm(task.id)">{{ task.title }}</span>
 
       </span>
-            <button @click="removeTask(task.id)" class="delete">X</button>
+            <div>
+              <button v-if="editingTaskId === task.id" @click="changeTask" class="save-btn">✔</button>
+              <button v-else @click="showForm(task.id)" class="edit-btn">✎</button>
+              <button @click="handleRemoveTask(task.id)" class="delete">X</button>
+            </div>
           </li>
 
         </template>
@@ -47,86 +52,91 @@
       </ul>
     </div>
 
-    <p v-if="getDay == ''">Для просмотра/добавления списка задач выберите дату.</p>
+    <p v-if="getDayInApp === ''">Для просмотра/добавления списка задач выберите дату.</p>
+    <p v-if="errorMessage" style="color: red;">{{ errorMessage }}</p>
   </div>
 </template>
 
 <script>
+import { mapGetters, mapActions } from 'vuex';
 
 export default {
   name: 'Task',
-  props: ['dayNum'],
+  props: {
+    dayNum: { type: String, default: '' }
+  },
   data() {
     return {
       taskInput: '',
+      editingTaskId: null,
+      errorMessage: '',
+      form: { text: '' },
+    }
+  },
+  computed: {
+    ...mapGetters(['tasksByDate']),
 
-      clickedIndex: Number,
-      form: {
-        text: ''
-      },
-      tasks: [
-        {
-          title: 'Первая задача',
-          checked: false,
-          edit: false,
-          date: '9 Март 2021',
-          id: 567
-        },
-        {
-          title: 'Вторая задача',
-          checked: false,
-          edit: false,
-          date: '4 Март 2021',
-          id: 568
-        },
-        {
-          title: 'Третья задача',
-          checked: false,
-          edit: false,
-          date: '7 Март 2021',
-          id: 569
-        },
-      ],
-      getDayInApp: '',
+    getDayInApp() {
+      return (this.dayNum || '').trim();
+    },
+
+    filteredTasks() {
+      return this.tasksByDate(this.getDayInApp);
     }
   },
   methods: {
-    check(index) {
-      for (let i of this.tasks) {
-        if (i.id === index) {
-          i.checked = true
-        }
+    ...mapActions(['addTask', 'updateTask', 'removeTask']),
+
+    check(id) {
+      const task = this.filteredTasks.find(t => t.id === id);
+      if (task) {
+        const updatedTaskData = { ...task, checked: !task.checked };
+        this.updateTask(updatedTaskData);
       }
     },
-    addTask() {
-      let newTask = {
-        title: this.taskInput,
+
+    handleAddTask() {
+      if (!this.taskInput.trim() || !this.getDayInApp) return;
+      const newTask = {
+        id: Date.now(),
+        title: this.taskInput.trim(),
         checked: false,
-        edit: false,
         date: this.getDayInApp,
-        id: Math.random()
-      }
-      this.tasks.push(newTask)
-      this.taskInput = ''
+      };
+      this.addTask(newTask);
+      this.taskInput = '';
     },
-    removeTask(id) {
-      this.tasks = this.tasks.filter(t => t.id !== id)
+
+    handleRemoveTask(id) {
+      this.removeTask(id);
     },
+
     showForm(id) {
-      this.tasks[id].edit = true
-      this.clickedIndex = id
-      this.form.text = this.tasks[id].title
+      const task = this.filteredTasks.find(t => t.id === id);
+      if (!task) return;
+      this.editingTaskId = id;
+      this.form.text = task.title;
     },
+
     changeTask() {
-      this.tasks[this.clickedIndex].title = this.form.text
-      this.tasks[this.clickedIndex].edit = false
+      if (!this.form.text.trim() || this.editingTaskId === null) return;
+      const task = this.filteredTasks.find(t => t.id === this.editingTaskId);
+      if (task) {
+        const updatedTaskData = {
+          ...task,
+          title: this.form.text.trim()
+        };
+        this.updateTask(updatedTaskData);
+        this.editingTaskId = null;
+        this.form.text = '';
+      }
     },
-  },
-  computed: {
-    getDay() {
-      return this.getDayInApp = this.dayNum;
+
+    cancelEdit() {
+        this.editingTaskId = null;
+        this.form.text = '';
     }
-  }
+  },
 }
 </script>
 
@@ -207,10 +217,22 @@ button:disabled {
   height: 25px;
   background: #ed9d9d;
 }
-
 .delete:active {
   border: 3px solid crimson;
 }
+
+.edit-btn {
+  border: 1px solid #2196F3;
+  width: 25px;
+  height: 25px;
+  background: #90CAF9;
+  color: #0D47A1;
+}
+
+.edit-btn:active {
+  border: 3px solid #1976D2;
+}
+
 
 .done {
   color: #7d7e82;
@@ -223,6 +245,19 @@ button:disabled {
 
 .checkbox {
   margin-right: 10px;
+}
+
+.save-btn {
+  border: 1px solid limegreen;
+  width: 25px;
+  height: 25px;
+  background: lightgreen;
+  color: darkgreen;
+  margin-left: 5px; /* Add some space between input and button */
+}
+
+.save-btn:active {
+  border: 3px solid darkgreen;
 }
 
 </style>

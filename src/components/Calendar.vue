@@ -17,10 +17,14 @@
       </thead>
       <tbody>
       <tr v-for="week in calendar()">
-        <td v-for="(day, index) in week"
+        <td v-for="(day, dIndex) in week"
+            :key="dIndex"
             :style="{'color': day.weekend, 'background-color': day.current}"
-            @click="$emit('getDate',day.index, monthes[month], year); toggleActive"
-        > {{ day.index }}
+            @click="day.index && $emit('getDate', `${day.index} ${monthes[month]} ${year}`)"
+            class="day-cell"
+            :class="{ 'has-tasks': hasTasks(day.index) }">
+          {{ day.index }}
+          <span v-if="hasTasks(day.index)" class="task-indicator"></span>
         </td>
       </tr>
       </tbody>
@@ -30,6 +34,8 @@
 </template>
 
 <script>
+import { mapGetters } from 'vuex';
+
 export default {
   name: "Calendar",
   emits: ['getDate'],
@@ -37,70 +43,64 @@ export default {
     return {
       month: new Date().getMonth(),
       year: new Date().getFullYear(),
-      dFirstMonth: '1',
       day: ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"],
       monthes: ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"],
-      date: new Date(),
     }
   },
   methods: {
-    calendar: function () {
-      let days = [];
-      let week = 0;
-      days[week] = [];
-      let dlast = new Date(this.year, this.month + 1, 0).getDate();
-      for (let i = 1; i <= dlast; i++) {
-        if (new Date(this.year, this.month, i).getDay() != this.dFirstMonth) {
-          let a = {index: i};
-          days[week].push(a);
-          if (i == new Date().getDate() && this.year == new Date().getFullYear() && this.month == new Date().getMonth()) {
-            a.current = '#747ae6'
-          };
-          if (new Date(this.year, this.month, i).getDay() == 6 || new Date(this.year, this.month, i).getDay() == 0) {
-            a.weekend = '#ff0000'
-          };
-        } else {
-          week++;
-
-          days[week] = [];
-          let a = {index: i};
-          days[week].push(a);
-          if ((i == new Date().getDate()) && (this.year == new Date().getFullYear()) && (this.month == new Date().getMonth())) {
-            a.current = '#747ae6'
-          };
-          if (new Date(this.year, this.month, i).getDay() == 6 || new Date(this.year, this.month, i).getDay() == 0) {
-            a.weekend = '#ff0000'
-          };
+    calendar() {
+      const days = []
+      const firstDay = new Date(this.year, this.month, 1).getDay()
+      const lastDate = new Date(this.year, this.month + 1, 0).getDate()
+      const today = new Date()
+      let week = []
+      const startDay = firstDay === 0 ? 6 : firstDay - 1
+      
+      for (let i = 0; i < startDay; i++) week.push('')
+      
+      for (let day = 1; day <= lastDate; day++) {
+        const date = new Date(this.year, this.month, day)
+        const isWeekend = date.getDay() === 0 || date.getDay() === 6
+        const isToday = day === today.getDate() &&
+                       this.month === today.getMonth() &&
+                       this.year === today.getFullYear()
+        
+        week.push({
+          index: day,
+          weekend: isWeekend ? '#ff0000' : undefined,
+          current: isToday ? '#747ae6' : undefined
+        })
+        
+        if (week.length === 7) {
+          days.push(week)
+          week = []
         }
       }
-
-      if (days[0].length > 0) {
-        for (let i = days[0].length; i < 7; i++) {
-          days[0].unshift('');
-
-        }
+      
+      if (week.length) {
+        while (week.length < 7) week.push('')
+        days.push(week)
       }
-      return days;
+      
+      return days
     },
-    decrease: function () {
-      this.month--;
-      if (this.month < 0) {
-        this.month = 12;
-        this.month--;
-        this.year--;
-      }
+    decrease() {
+      this.month = (this.month - 1 + 12) % 12
+      if (this.month === 11) this.year--
     },
-
-    increase: function () {
-      this.month++;
-      if (this.month > 11) {
-        this.month = -1;
-        this.month++;
-        this.year++;
-      }
+    increase() {
+      this.month = (this.month + 1) % 12
+      if (this.month === 0) this.year++
+    },
+    hasTasks(day) {
+      if (!day) return false
+      const dateStr = `${day} ${this.monthes[this.month]} ${this.year}`
+      return this.allTasks.some(task => task.date === dateStr)
     },
   },
-  computed: {}
+  computed: {
+    ...mapGetters(['allTasks'])
+  }
 }
 </script>
 
@@ -120,6 +120,7 @@ export default {
 }
 
 .table td {
+  position: relative;
   text-align: center;
   width: 50px;
   height: 50px;
@@ -127,8 +128,30 @@ export default {
   cursor: pointer;
 }
 
+.day-cell {
+  text-align: center;
+  width: 50px;
+  height: 50px;
+  font-size: 25px;
+  cursor: pointer;
+}
+
+.task-indicator {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 8px;
+  height: 8px;
+  background-color: #ff4444;
+  border-radius: 50%;
+}
+
 .table thead tr:last-child {
   background-color: #dedada;
+}
+
+.table td:hover:not(:empty) {
+  background-color: #f0f0f0;
 }
 
 </style>

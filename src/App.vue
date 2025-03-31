@@ -21,8 +21,8 @@ export default {
     Tasks
   },
   methods: {
-    getDate(day, month, year) {
-      this.dayNum = `${day} ${month} ${year}`
+    getDate(dateString) {
+      this.dayNum = dateString;
     },
   }
 }
